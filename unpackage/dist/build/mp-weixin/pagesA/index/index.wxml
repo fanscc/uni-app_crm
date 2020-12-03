@@ -1,0 +1,1 @@
+<view><view>分包内容</view><view data-event-opts="{{[['tap',[['gotoapi',['$event']]]]]}}" bindtap="__e">分包跳转</view></view>

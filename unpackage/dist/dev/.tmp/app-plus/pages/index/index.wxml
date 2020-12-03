@@ -1,0 +1,1 @@
+<view class="content" bind:__l="__l"><image class="logo" src="/static/logo.png"></image><view class="_div"><label class="title _span">{{title+"11"}}</label></view></view>

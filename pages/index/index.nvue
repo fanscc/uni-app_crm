@@ -1,0 +1,377 @@
+<template>
+	<view class="content">
+		<view class="home_nav">
+			<view class="home_nav_item">
+				<uni-icons type="personadd-filled"></uni-icons>
+				<text>建客户</text>
+			</view>
+			<view class="home_nav_item">
+				<uni-icons type="camera"></uni-icons>
+				<text>建商机</text>
+			</view>
+			<view class="home_nav_item">
+				<uni-icons type="chat"></uni-icons>
+				<text>发任务</text>
+			</view>
+			<view class="home_nav_item">
+				<uni-icons type="pulldown"></uni-icons>
+				<text>写日志</text>
+			</view>
+		</view>
+		<view class="common_tools">
+			常用功能
+		</view>
+		<view class="common_tools_conten">
+			<uni-grid :column="4">
+				<uni-grid-item v-for="(item,index) in tools" :key="index">
+					<view class="grid-item-box" :style="{'margin-left': index === 0|| index === 4? '5px': '' }">
+						<uni-icons type="pulldown"></uni-icons>
+						<text>{{item.text}}</text>
+					</view>
+				</uni-grid-item>
+			</uni-grid>
+		</view>
+		<view class="common_tools">
+			仪表盘
+		</view>
+		<view class="instrument_conten">
+			<view class="instrument_conten_bg">
+				<view class="instrument_conten_nav">
+					<uni-icons type="pulldown"></uni-icons>
+					<text>销售简报</text>
+				</view>
+				<view class="instrument_conten_grip">
+					<uni-grid :column="4">
+						<uni-grid-item v-for="(item,index) in tools" :key="index">
+							<view class="grid-item-box" :style="{'margin-left': index === 0|| index === 4? '5px': '' }">
+								<text>0.0</text>
+								<text>{{item.text}}</text>
+							</view>
+						</uni-grid-item>
+					</uni-grid>
+				</view>
+			</view>
+		</view>
+		<view style="padding-left: 10px;padding-right: 10px;">
+			<view class="contract_conten">
+				<view class="contract_conten_nav">
+					<uni-icons type="pulldown"></uni-icons>
+					<text>合同金额及目标完成情况</text>
+				</view>
+				<view class="qiun-charts">
+					<canvas canvas-id="canvasLineA" id="canvasLineA" class="charts" disable-scroll=true
+					@touchstart="touchLineA" @touchmove="moveLineA" @touchend="touchEndLineA"
+					>	
+					</canvas>
+				</view>
+			</view>
+			<view class="contract_conten">
+				<view class="contract_conten_nav">
+					<uni-icons type="pulldown"></uni-icons>
+					<text>合同完成率情况</text>
+				</view>
+				<view class="qiun-charts">
+					<canvas canvas-id="canvasGauge" id="canvasGauge" class="charts"></canvas>
+				</view>
+			</view>
+			<view class="contract_conten">
+				<view class="contract_conten_nav">
+					<view style="flex-direction: row;">
+						<uni-icons type="pulldown"></uni-icons>
+						<text>排行榜</text>
+					</view>
+					<view class="uni-list-cell">
+						<view class="uni-list-cell-left">
+							过滤条件:
+						</view>
+						<view class="uni-list-cell-db">
+							<picker @change="bindPickerChange" :value="index" :range="array" range-key="name">
+							    <view class="uni-input">{{array[index].name}}</view>
+							</picker>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>	
+	</view>
+</template>
+
+<script>
+	import uniIcons from '@/components/uni-icons/uni-icons.vue'
+    import uCharts from '@/components/u-charts/u-charts.js';
+	let _self;
+	let canvasLineChart;
+	let gaugeChar;
+	export default {
+		name: 'home',
+		components: {
+			uniIcons
+		},
+		data() {
+			return {
+				tools: [
+					{text: '客户'},
+					{text: '商机'},
+					{text: '客户'},
+					{text: '客户'},
+					{text: '客户'},
+					{text: '客户'},
+					{text: '客户'},
+					{text: '客户'}				
+				],
+				array: [{name:'中国'},{name: '美国'}, {name:'巴西'}, {name:'日本'}],
+				index: 0,
+				serverData: '',
+				cWidth: '',
+				cHeight: '',
+				gaugeWidth: '',
+				pixelRatio: 1,
+				sliderMax: 50
+			}
+		},
+		onLoad() {
+			_self = this;
+			this.cWidth = uni.upx2px(750);
+			this.cHeight = uni.upx2px(500);
+			this.gaugeWidth = uni.upx2px(30);
+			console.log(1, this.cWidth)
+			console.log(2, this.cHeight)
+		},
+		onReady() {
+			this.getServerData();
+		},
+		methods: {
+			getServerData() {
+				uni.showLoading({
+					title: "正在加载数据..."
+				})
+				uni.request({
+					url: 'https://unidemo.dcloud.net.cn/hello-uniapp-ucharts-data.json',
+					data: {},
+					success: function(res) {
+						_self.fillData(res.data);
+					},
+					fail: () => {
+						
+					},
+					complete() {
+						uni.hideLoading();
+					}
+				});
+			},
+			fillData(data) {
+				this.serverData = data;
+				this.sliderMax = data.Candle.categories.length;	
+				let LineA = {
+					categories: [],
+					series: []
+				};
+				let Gauge = {
+					categories: [],
+					series: []
+				};
+				LineA.categories = data.LineA.categories;
+				LineA.series = data.LineA.series;
+				Gauge.categories = data.Gauge.categories;
+				Gauge.series = data.Gauge.series;				
+				this.showLineA("canvasLineA", LineA);
+				this.showGauge("canvasGauge", Gauge);
+			},
+			showLineA(canvasId, chartData) {
+				canvasLineChart = new uCharts({
+					$this: _self,
+					canvasId: canvasId,
+					type: 'line',
+					fontSize: 11,
+					padding:[15,15,0,15],
+					legend:{
+						show:true,
+						padding:5,
+						lineHeight:11,
+						margin:5,
+					},
+					dataLabel: false,
+					dataPointShape: false,
+					background: '#FFFFFF',
+					pixelRatio: _self.pixelRatio,
+					categories: chartData.categories,
+					series: chartData.series,
+					animation: false,
+					enableScroll: true, //开启图表拖拽功能
+					xAxis: {
+						disableGrid: false,
+						type: 'grid',
+						gridType: 'dash',
+						itemCount: 4, 
+						scrollShow: true, 
+						scrollAlign: 'left',
+					},
+					yAxis: {
+						gridType: 'dash',
+						min: 10,
+						max: 180,
+						format: (val) => {
+							return val.toFixed(0) + '元'
+						} //如不写此方法，Y轴刻度默认保留两位小数
+					},
+					width: _self.cWidth * _self.pixelRatio,
+					height: _self.cHeight * _self.pixelRatio,
+					dataLabel: true,
+					dataPointShape: true,
+					extra: {
+						lineStyle: 'straight'
+					},
+				});
+			},
+			showGauge(canvasId, chartData) {
+				gaugeChar = new uCharts({
+					$this: _self,
+					canvasId: canvasId,
+					type: 'gauge',
+					fontSize: 11,
+					title: {
+						name: Math.round(chartData.series[0].data * 100) + '%',
+						color: chartData.categories[1].color,
+						fontSize: 25 * _self.pixelRatio,
+						offsetY: 50 * _self.pixelRatio, //新增参数，自定义调整Y轴文案距离
+					},
+					subtitle: {
+						name: chartData.series[0].name,
+						color: '#666666',
+						fontSize: 15 * _self.pixelRatio,
+						offsetY: -50 * _self.pixelRatio, //新增参数，自定义调整Y轴文案距离
+					},
+					extra: {
+						gauge: {
+							type: 'default',
+							width: _self.gaugeWidth * _self.pixelRatio, //仪表盘背景的宽度
+							startAngle: 0.75,
+							endAngle: 0.25,
+							startNumber: 0,
+							endNumber: 100,
+							splitLine: {
+								fixRadius: 0,
+								splitNumber: 10,
+								width: _self.gaugeWidth * _self.pixelRatio, //仪表盘背景的宽度
+								color: '#FFFFFF',
+								childNumber: 5,
+								childWidth: _self.gaugeWidth * 0.4 * _self.pixelRatio, //仪表盘背景的宽度
+							},
+							pointer: {
+								width: _self.gaugeWidth * 0.8 * _self.pixelRatio, //指针宽度
+								color: 'auto'
+							}
+						}
+					},
+					background: '#FFFFFF',
+					pixelRatio: _self.pixelRatio,
+					categories: chartData.categories,
+					series: chartData.series,
+					animation: true,
+					width: _self.cWidth * _self.pixelRatio,
+					height: _self.cHeight * _self.pixelRatio,
+					dataLabel: true,
+				});
+			},
+			touchLineA(e) {
+				canvasLineChart.scrollStart(e);
+			},
+			moveLineA(e) {
+				canvasLineChart.scroll(e);
+			},
+			touchEndLineA(e) {
+				canvasLineChart.scrollEnd(e);
+				//下面是toolTip事件，如果滚动后不需要显示，可不填写
+				canvasLineChart.showToolTip(e, {
+					format: function(item, category) {
+						return category + ' ' + item.name + ':' + item.data
+					}
+				});
+			},
+			bindPickerChange: function(e) {
+				console.log('picker发送选择改变，携带值为：' + e.detail.value)
+				this.index = e.detail.value
+			},
+		}
+	}
+</script>
+
+<style lang="scss" scoped>
+.content {
+	background-color: #e5e5e5;
+	padding-top: 10px;
+}
+.home_nav {
+	width: 350px;
+	margin: auto;
+	height: 60px;
+	background: #fff;
+	border-radius: 20px;
+	flex-direction: row;
+	.home_nav_item {
+		color: #007AFF;
+		font-size: 12px;
+		.uni-icons {
+			color: #007AFF !important;
+		}
+		flex: 1;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+	}
+}
+.common_tools_conten {
+	padding-left: 10px;
+	padding-right: 10px;
+}
+.common_tools {
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 5px;
+}
+.grid-item-box {
+	flex: 1;
+	justify-content: center;
+	align-items: center;
+	background-color: #fff;
+	border-radius: 10px;
+	margin-right: 5px;
+}
+.instrument_conten {
+	padding-left: 10px;
+	padding-right: 10px;
+	.instrument_conten_bg {
+		background-color: #fff;
+	}
+	.instrument_conten_nav {
+		flex-direction: row;
+		align-items: center;
+		height: 40px;
+	}
+}
+.contract_conten {
+	margin-top: 20px;
+	background-color: #fff;
+	padding-bottom: 20px;
+	border-radius: 20px;
+	.contract_conten_nav {
+		height: 40px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		.uni-list-cell {
+			flex: 1;
+			flex-direction: row;
+			.uni-list-cell-db {
+				background-color: #808080;
+				flex: 1;
+			}
+		}
+	}
+}
+.charts {
+	width: 355px;
+	height: 250px;
+	background-color: #FFFFFF;
+}
+</style>

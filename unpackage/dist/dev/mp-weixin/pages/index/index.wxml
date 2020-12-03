@@ -1,0 +1,1 @@
+<view class="content"><view class="status_bar"></view><view class="nav _div"><label class="_span">首页</label><label class="_span">admin</label></view><image class="logo" src="/static/logo.png"></image><view class="_div"><label class="title _span">{{title+"121"}}</label></view><view data-event-opts="{{[['tap',[['gotoapi',['$event']]]]]}}" bindtap="__e">点击去分包</view></view>
